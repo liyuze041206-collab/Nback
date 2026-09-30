@@ -1,0 +1,162 @@
+{
+  "source": "用户提供的代码和权重包，原件未修改",
+  "fold_count": 26,
+  "checks": [
+    {
+      "target_subject": "sub-01",
+      "validation_subject": "sub-02",
+      "sha256": "efc0bd89ddc49a05563927eb71afdbbb1a6cd604ba6301fb34d18f3e3bf49dc5",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-01 validation_subject=sub-02"
+    },
+    {
+      "target_subject": "sub-02",
+      "validation_subject": "sub-03",
+      "sha256": "8e089e53da0bd25e5fa57d9b15cf05b60e1b2d4747de8b315efdc0a661db2932",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-02 validation_subject=sub-03"
+    },
+    {
+      "target_subject": "sub-03",
+      "validation_subject": "sub-04",
+      "sha256": "72615f6a4dc32174564626eaffb4e35ba94901b16127aaccd645d87a9b4eb67b",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-03 validation_subject=sub-04"
+    },
+    {
+      "target_subject": "sub-04",
+      "validation_subject": "sub-05",
+      "sha256": "37e528d11299b7b6cf76c2acf7ef1970f20113336557f1e0b01c0934836df0d8",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-04 validation_subject=sub-05"
+    },
+    {
+      "target_subject": "sub-05",
+      "validation_subject": "sub-06",
+      "sha256": "9e51ae1a512b5293c766a34cc744a1ad9c4bd5ca28fe80ca10f68dcc5dacb601",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-05 validation_subject=sub-06"
+    },
+    {
+      "target_subject": "sub-06",
+      "validation_subject": "sub-07",
+      "sha256": "1f112dd92597bf36c86e9cd522f9f23572f61d7e4dfe81dd72b936697cb543fa",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-06 validation_subject=sub-07"
+    },
+    {
+      "target_subject": "sub-07",
+      "validation_subject": "sub-08",
+      "sha256": "ae70014dbce86d3909f74f5eff459035a1b6dbb9ecded336ed97ac17493f4b0f",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-07 validation_subject=sub-08"
+    },
+    {
+      "target_subject": "sub-08",
+      "validation_subject": "sub-09",
+      "sha256": "88c692273806139547cf142f41f328d7a8baadf34cf41d330c9ee140f2685d45",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-08 validation_subject=sub-09"
+    },
+    {
+      "target_subject": "sub-09",
+      "validation_subject": "sub-10",
+      "sha256": "b31f3073850c13985252a2ff9e52fabaac5fcebf278be620fbb234f9dd57f47d",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-09 validation_subject=sub-10"
+    },
+    {
+      "target_subject": "sub-10",
+      "validation_subject": "sub-11",
+      "sha256": "1f6f0371115976f6011d50506e796a72a234be886a21dbc6fc39842cabcb24f6",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-10 validation_subject=sub-11"
+    },
+    {
+      "target_subject": "sub-11",
+      "validation_subject": "sub-12",
+      "sha256": "704b0db0d1bdf36932cc7efd374f24c24237ea182e13e3568309d1153740c81a",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-11 validation_subject=sub-12"
+    },
+    {
+      "target_subject": "sub-12",
+      "validation_subject": "sub-13",
+      "sha256": "941f92f137b6363a0bc4edda00aa8e14c03290403dbe27c4edec2705beb81e47",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-12 validation_subject=sub-13"
+    },
+    {
+      "target_subject": "sub-13",
+      "validation_subject": "sub-14",
+      "sha256": "6e583db734a9102036d4b2e787778cde64301be7e8582fcbf564c863447194d7",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-13 validation_subject=sub-14"
+    },
+    {
+      "target_subject": "sub-14",
+      "validation_subject": "sub-15",
+      "sha256": "cf76c6e8484dd5315a655154254b4c5e6621fe6e87d30de0b296b05b6a395362",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-14 validation_subject=sub-15"
+    },
+    {
+      "target_subject": "sub-15",
+      "validation_subject": "sub-16",
+      "sha256": "94cef9ff4154f654dcd0ac55be4e1c9fe8c6fa513cf61286b1394327d6e87314",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-15 validation_subject=sub-16"
+    },
+    {
+      "target_subject": "sub-16",
+      "validation_subject": "sub-17",
+      "sha256": "7bca352a358b8d2c10240b912085ffb9e37485ec65b92616f0ed5c7d7c59f8f6",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-16 validation_subject=sub-17"
+    },
+    {
+      "target_subject": "sub-17",
+      "validation_subject": "sub-18",
+      "sha256": "48e049b90c7faface3bd88d9e31b1dcae6b2c558c2e2af88548cd2d5e41a3d90",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-17 validation_subject=sub-18"
+    },
+    {
+      "target_subject": "sub-18",
+      "validation_subject": "sub-19",
+      "sha256": "a53871381eed5332002dad69ada62f553bbc40f8d598a4ebac803a9c0127b95b",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-18 validation_subject=sub-19"
+    },
+    {
+      "target_subject": "sub-19",
+      "validation_subject": "sub-20",
+      "sha256": "b6375036ca8991ed854f969adf1d4be7d73746c724c616eb10c634bce55e919c",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-19 validation_subject=sub-20"
+    },
+    {
+      "target_subject": "sub-20",
+      "validation_subject": "sub-21",
+      "sha256": "43b10fa84a247e66160424120420285d67ba6e8840f0185dbb3618c123ec60f1",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-20 validation_subject=sub-21"
+    },
+    {
+      "target_subject": "sub-21",
+      "validation_subject": "sub-22",
+      "sha256": "13ed24a12fe1b78a5bdc3adb7227c0cd96c7f98630a1773a2de271a38bbff4e2",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-21 validation_subject=sub-22"
+    },
+    {
+      "target_subject": "sub-22",
+      "validation_subject": "sub-23",
+      "sha256": "af01e4e9fbfca6510043e8d1c28fb2b19dddc7b006f5dc2c38dca5702584a85f",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-22 validation_subject=sub-23"
+    },
+    {
+      "target_subject": "sub-23",
+      "validation_subject": "sub-24",
+      "sha256": "0b6b13f47dafb2068afb5e341d8f4d585068dbe8bcf95591bd48a8b1767d4f05",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-23 validation_subject=sub-24"
+    },
+    {
+      "target_subject": "sub-24",
+      "validation_subject": "sub-26",
+      "sha256": "630befe9ec78c756d00b7a1750f640cde0b1dd4d04e1fd079f67a7f5e536fcdb",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-24 validation_subject=sub-26"
+    },
+    {
+      "target_subject": "sub-26",
+      "validation_subject": "sub-29",
+      "sha256": "3343c262b68b89311ff76fcdbca3bcba7c81a657d596471aa2d87d1382cb969a",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-26 validation_subject=sub-29"
+    },
+    {
+      "target_subject": "sub-29",
+      "validation_subject": "sub-01",
+      "sha256": "97ed9cc1870089da0c82c2fb3e1e2b68d59d6bc28bdadd75d043e8ebfdc15ba2",
+      "temporal_source": "13_Nback_24epoch/fold_metrics.csv : sub-29 validation_subject=sub-01"
+    }
+  ]
+}
