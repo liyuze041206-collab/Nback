@@ -1,9 +1,10 @@
+import {mockUploadAnalysis,selectMockUpload} from './qa-upload-fixture.mjs';
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
-const origin='http://127.0.0.1:5173';
+const origin=process.env.PORTAL_ORIGIN||'http://127.0.0.1:8000';
 const demo=await readFile(resolve(import.meta.dirname,'../gspm_eeg_workload_demo.html'),'utf8');
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{
@@ -26,14 +27,13 @@ try{
     const url=new URL(route.request().url());
     if(url.pathname==='/demo')return route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:demo});
     if(url.pathname==='/api/status')return route.fulfill({json:{model:{folds:[{id:'sub-01',ready:true,validation_subject:'sub-02'}]}}});
-    if(url.pathname==='/api/demo/analyses'&&route.request().method()==='POST')return route.fulfill({json:{id:'ui-particle-test'}});
-    if(url.pathname==='/api/demo/analyses/ui-particle-test')return route.fulfill({json:{status:'complete',mode:'demo-real',temporal_enabled:false,sfreq:250,final_class_label:0,vote_0:2,vote_2:0,rows:[0,1].map(i=>({window:i+1,start_sec:i*2,end_sec:i*2+2,prob_0:.8,prob_2:.2,class_label:0}))}});
     return route.continue();
   });
+  await mockUploadAnalysis(page,{windows:2});
   await page.goto(`${origin}/portal.html#eeg`);
   const eeg=page.frameLocator('#eeg-frame');
   await eeg.locator('#networkSvg').waitFor();
-  await eeg.locator('#startBtn').click();
+  await selectMockUpload(eeg);await eeg.locator('#startBtn').click();
   await eeg.locator('#pulses circle').first().waitFor();
   await page.waitForFunction(()=>{const f=document.querySelector('#eeg-frame')?.contentWindow;return (f?.__particleMoves||0)>=2});
   const moves=await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.__particleMoves);

@@ -4,9 +4,11 @@ import csv
 import io
 import json
 import os
+import re
 import threading
 import time
 import uuid
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -62,10 +64,11 @@ class AnalysisRequest(BaseModel):
     event_types: list[str] = Field(default_factory=list)
 
 
-def create_app(data_root=None,model_root=None):
+def create_app(data_root=None,model_root=None,support_root=None):
     root=Path(data_root or os.environ.get('GSPM_DATA_DIR',ROOT/'runtime')).resolve()
     for sub in ['recordings','calibrations','analyses']:(root/sub).mkdir(parents=True,exist_ok=True)
     engine=ModelCatalog(model_root or ROOT/'backend/models')
+    support_directory=Path(support_root or os.environ.get('GSPM_SUPPORT_DIR',ROOT.parent/'真实数据测试'/'网页上传数据')).resolve()
     executor=ThreadPoolExecutor(max_workers=1,thread_name_prefix='gspm')
     lock=threading.RLock()
     demo_jobs={}
@@ -102,6 +105,48 @@ def create_app(data_root=None,model_root=None):
         try:return engine.require(model_id,subject)
         except InputError as exc:raise HTTPException(409,str(exc)) from exc
 
+    def store_recording(data,meta,reuse=False):
+        with lock:
+            if reuse:
+                for existing in items('recordings'):
+                    if (existing['fingerprint']==meta['fingerprint'] and
+                        existing.get('prepared')==meta.get('prepared') and
+                        path('recordings',existing['id'],'.npy').is_file()):
+                        return existing
+            key=str(uuid.uuid4());meta={**meta,'id':key,'created_at':time.time()}
+            np.save(path('recordings',key,'.npy'),data,allow_pickle=False)
+            save('recordings',key,meta)
+            return meta
+
+    def check_prepared_identity(meta):
+        info=meta.get('prepared')
+        if not info:raise InputError('请上传带被试、session 和用途信息的网页专用 NPZ；普通 EEG 请使用完整工作台。')
+        if not re.fullmatch(r'sub-\d{2}',info['subject']) or not re.fullmatch(r'ses-[A-Za-z0-9_-]+',info['session']):
+            raise InputError('文件的被试或 session 标识无效，请补充正确的文件信息。')
+        for pattern,field in [(r'(?i)(?<![a-z0-9])sub-\d+(?!\d)','subject'),
+                              (r'(?i)(?<![a-z0-9])ses-[a-z0-9]+','session')]:
+            if any(value.lower()!=info[field].lower() for value in re.findall(pattern,meta['name'])):
+                raise InputError('文件名的被试或 session 与文件内部信息不一致，请检查文件。')
+        return info
+
+    def check_support_query(record,support_records):
+        info=record['prepared']
+        supports=[m.get('prepared') for m in support_records]
+        if len(supports)!=2:raise InputError('校准需要两类独立支持信号。')
+        for meta,s,role in zip(support_records,supports,['support0','support2']):
+            if not s or (s['role'],s['subject'],s['session'])!=(role,info['subject'],info['session']):
+                raise InputError('支持文件的用途、被试或 session 与查询不匹配。')
+            if meta['fingerprint']==record['fingerprint']:
+                raise InputError('查询信号已用于支持校准，请使用独立查询文件。')
+            if s['source_id']==info['source_id'] and any(abs(a-b)<2.-1e-6 for a in s['onsets'] for b in info['onsets']):
+                raise InputError('查询窗口与支持窗口有时间重叠，请使用独立划分的数据。')
+        if support_records[0]['fingerprint']==support_records[1]['fingerprint']:
+            raise InputError('两类支持集不能使用同一段信号。')
+        if info['source_id'] not in {s['source_id'] for s in supports}:
+            raise InputError('查询与支持数据的来源不匹配，请使用同一数据划分的文件。')
+        if len(supports[0]['onsets'])!=len(supports[1]['onsets']):
+            raise InputError('两类支持窗口数量不一致。')
+
     @asynccontextmanager
     async def lifespan(app):
         for job in items('analyses'):
@@ -119,7 +164,10 @@ def create_app(data_root=None,model_root=None):
     @app.middleware('http')
     async def local_origin(request,call_next):
         origin=request.headers.get('origin')
-        if origin and origin not in {'null','http://127.0.0.1:5173','http://localhost:5173','http://127.0.0.1:8000','http://localhost:8000','http://testserver'}:
+        allowed={'null','http://127.0.0.1:5173','http://localhost:5173','http://127.0.0.1:8000','http://localhost:8000','http://testserver'}
+        if request.url.hostname in {'127.0.0.1','localhost','testserver'}:
+            allowed.add(str(request.base_url).rstrip('/'))
+        if origin and origin not in allowed:
             return JSONResponse({'detail':'仅接受本机工作台请求。'},status_code=403)
         return await call_next(request)
 
@@ -199,9 +247,7 @@ def create_app(data_root=None,model_root=None):
                 if not isinstance(manual,list) or any(isinstance(t,bool) or not isinstance(t,(int,float)) for t in manual):raise ValueError()
             except ValueError:raise InputError('事件时间请输入秒数数组，例如 [0, 2, 4]。')
         data,meta=parse_recording(payload,sfreq,unit,manual)
-        key=str(uuid.uuid4());meta.update(id=key,created_at=time.time())
-        np.save(path('recordings',key,'.npy'),data,allow_pickle=False)
-        save('recordings',key,meta)
+        meta=store_recording(data,meta)
         return {**meta,'preview':preview(data,meta['sfreq'])}
 
     @app.get('/api/recordings')
@@ -261,6 +307,79 @@ def create_app(data_root=None,model_root=None):
             np.savez(path('calibrations',key,'.npz'),**baseline)
             save('calibrations',key,meta)
         return meta
+
+    @app.post('/api/recordings/{key}/prepare-analysis')
+    def prepare_analysis(key:str):
+        with lock:
+            _,record=load_signal(key)
+            info=check_prepared_identity(record)
+            if info['role']!='query':raise InputError('请选择待分类的查询 NPZ，不要上传支持文件。')
+            subject,session=info['subject'],info['session']
+            if subject not in engine.folds:raise HTTPException(409,f'未安装 {subject} 对应的模型折，无法自动匹配。')
+            _,version,config=require_model(subject,subject)
+
+            def response(profile):
+                return dict(subject=subject,session=session,model_id=subject,
+                            validation_subject=config.get('validation_subject'),calibration_id=profile['id'],
+                            window_mode=profile['window_mode'],event_types=profile['event_types'])
+
+            # Ignore obsolete or damaged profiles, then try local support data.
+            candidates=[]
+            for file in (root/'calibrations').glob('*.json'):
+                try:
+                    profile=read('calibrations',file.stem)
+                    if ((profile.get('subject'),profile.get('session'),profile.get('model_id'),profile.get('model_version'))
+                        != (subject,session,subject,version) or digest(profile.get('preprocessing'))!=digest(FEATURE_CONFIG)):
+                        continue
+                    if profile.get('window_mode') not in {'continuous','events'} or not isinstance(profile.get('event_types'),list):continue
+                    records=[load_signal(k)[1] for k in profile['recording_ids']]
+                    for meta in records:check_prepared_identity(meta)
+                    check_support_query(record,records)
+                    if profile.get('prepared_support')!=[m['prepared'] for m in records]:continue
+                    if profile.get('fingerprints')!=[m['fingerprint'] for m in records]:continue
+                    if profile.get('shots')!=len(records[0]['prepared']['onsets']):continue
+                    with np.load(path('calibrations',profile['id'],'.npz'),allow_pickle=False) as baseline:
+                        shapes={'mean':(5,62),'scale':(5,62),'means':(2,96),'variances':(2,96)}
+                        if set(baseline.files)!=set(shapes):continue
+                        if any(baseline[k].shape!=shape or not np.isfinite(baseline[k]).all() for k,shape in shapes.items()):continue
+                        if np.any(baseline['scale']<=0) or np.any(baseline['variances']<=0):continue
+                    candidates.append(profile)
+                except (HTTPException,InputError,OSError,ValueError,KeyError,TypeError,EOFError,zipfile.BadZipFile):
+                    continue
+            if candidates:
+                return response(max(candidates,key=lambda p:(p['created_at'],p['id'])))
+
+            folder=(support_directory/subject/session).resolve()
+            if not folder.is_relative_to(support_directory) or not folder.is_dir():
+                raise HTTPException(409,f'未找到 {subject} · {session} 的校准档案或本机支持文件，请配置 GSPM_SUPPORT_DIR。')
+            supports={'support0':[],'support2':[]}
+            for file in sorted(folder.glob('*.npz')):
+                # Read just the manifest first; query NPZs can be much larger.
+                if not file.resolve().is_relative_to(support_directory):raise HTTPException(409,'支持文件路径超出本机支持目录。')
+                if file.stat().st_size>MAX_BYTES:raise HTTPException(409,'本机支持目录包含过大的 NPZ。')
+                try:
+                    with np.load(file,allow_pickle=False) as z:
+                        with zipfile.ZipFile(file) as archive:
+                            if sum(i.file_size for i in archive.infolist())>MAX_BYTES:raise ValueError('NPZ 解压后过大')
+                        manifest=json.loads(str(z['prepared_manifest'].item()))
+                    if manifest.get('role') not in supports:continue
+                    data,meta=parse_recording({file.name:file.read_bytes()})
+                    s=check_prepared_identity(meta)
+                    if (s['subject'],s['session'])!=(subject,session):raise InputError('支持文件的被试或 session 与所在目录不一致。')
+                    supports[s['role']].append((data,meta))
+                except (OSError,ValueError,KeyError,TypeError,EOFError,zipfile.BadZipFile) as exc:
+                    raise HTTPException(409,f'本机支持文件 {file.name} 无法使用：{str(exc)[:180]}') from exc
+            if any(len(v)!=1 for v in supports.values()):
+                raise HTTPException(409,'本机支持文件缺失或有重复候选；每类应恰好有一个支持 NPZ。')
+            pair=[supports[role][0] for role in ['support0','support2']]
+            try:check_support_query(record,[meta for _,meta in pair])
+            except InputError as exc:raise HTTPException(409,str(exc)) from exc
+            shots=len(pair[0][1]['prepared']['onsets'])
+            if not 2<=shots<=100:raise HTTPException(409,'本机支持窗口数应在每类 2–100 个范围内。')
+            records=[store_recording(data,meta,reuse=True) for data,meta in pair]
+            profile=create_calibration(CalibrationRequest(record_0=records[0]['id'],record_2=records[1]['id'],
+                subject=subject,session=session,shots=shots,model_id=subject,window_mode='continuous',event_types=[]))
+            return response(profile)
 
     @app.delete('/api/calibrations/{key}')
     def delete_calibration(key:str):

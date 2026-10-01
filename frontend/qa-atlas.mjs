@@ -20,7 +20,7 @@ try{
  await page.getByRole('heading',{name:'GSC 门控编码器',exact:true}).waitFor();
  await page.screenshot({path:fileURLToPath(new URL('gsc-desktop.png',output)),fullPage:true,animations:"disabled"});
  const keys=await page.locator('.module-nav button').evaluateAll(ns=>ns.map(n=>n.dataset.open));
- for(const key of keys){await page.locator(`.module-nav [data-open=${key}]`).click();await page.waitForFunction(k=>location.hash==='#'+k,key);check(await page.locator('#detail-title').innerText()!=='','Title '+key);check(await page.locator('#detail-visual svg').count()===1,'Diagram '+key);check(await page.locator('#detail-source').innerText()!=='','Source '+key);}
+ for(const key of keys){await page.locator(`.module-nav [data-open=${key}]`).click();await page.waitForFunction(k=>location.hash==='#'+k,key);check(await page.locator('#detail-title').innerText()!=='','Title '+key);check(await page.locator('#detail-visual svg').count()===1,'Diagram '+key);check(await page.locator('#detail-source,.visual-caption,.research-note').count()===0,'No source or explanatory notices '+key);}
  await page.keyboard.press('Escape');await page.locator('#overview').waitFor();
  await page.locator('.node[data-open=psd]').focus();await page.keyboard.press('Enter');await page.getByRole('heading',{name:'Welch 对数功率谱',exact:true}).waitFor();
  await page.goBack();await page.locator('#overview').waitFor();

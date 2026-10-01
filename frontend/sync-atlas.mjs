@@ -6,4 +6,5 @@ await copyFile(new URL('../gspm_portal.html',import.meta.url),new URL('portal.ht
 await copyFile(new URL('../gspm_shared_theme.css',import.meta.url),new URL('gspm_shared_theme.css',target));
 
 await copyFile(new URL('../gspm_ui.js',import.meta.url),new URL('gspm_ui.js',target));
+await copyFile(new URL('../gspm_diagrams.js',import.meta.url),new URL('gspm_diagrams.js',target));
 await cp(new URL('../assets/',import.meta.url),new URL('assets/',target),{recursive:true});

@@ -1,3 +1,4 @@
+import {mockUploadAnalysis,selectMockUpload} from './qa-upload-fixture.mjs';
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
@@ -10,8 +11,7 @@ const check=(ok,label)=>{assert.ok(ok,label);checks.push(label)};
 try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(10000);page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{window.__particleMoves=0;const original=SVGElement.prototype.setAttribute,prior=new WeakMap();SVGElement.prototype.setAttribute=function(name,value){if(name==='cx'&&this.parentElement?.id==='pulses'){const old=prior.get(this);if(old!==undefined&&old!==String(value))window.__particleMoves++;prior.set(this,String(value))}return original.call(this,name,value)}});
- await page.route('**/api/demo/analyses',route=>route.fulfill({json:{id:'brand-ui-test'}}));
- await page.route('**/api/demo/analyses/brand-ui-test',route=>route.fulfill({json:{status:'complete',mode:'demo-real',temporal_enabled:false,sfreq:250,final_class_label:0,vote_0:20,vote_2:0,rows:Array.from({length:20},(_,i)=>({window:i+1,start_sec:i*2,end_sec:i*2+2,prob_0:.8,prob_2:.2,class_label:0}))}}));
+ await mockUploadAnalysis(page,{windows:20});
  await page.goto(origin+'/portal.html#architecture');const arch=page.frameLocator('#architecture-frame'),eeg=page.frameLocator('#eeg-frame');await arch.locator('.node').first().waitFor();
  const menu=async()=>{if(await page.locator('.settings-panel').isHidden())await page.locator('.settings-trigger').click()};
  const navigate=async view=>{await menu();await page.locator(`[data-page=${view}]`).click();await page.locator(`[data-panel=${view}].is-active`).waitFor();await page.waitForTimeout(280)};
@@ -29,16 +29,16 @@ try{
    check(await arch.locator('html').evaluate(e=>e.scrollWidth<=innerWidth+1),`${mode} architecture overview fits ${width}`);
    await page.screenshot({path:resolve(output,`architecture-${mode}-${width}.png`)});
    await arch.locator('.node[data-open=gsc]').click();const keys=await arch.locator('.module-nav button').evaluateAll(ns=>ns.map(n=>n.dataset.open));check(keys.length===16,'16 module details');
-   for(const key of keys){await arch.locator(`.module-nav [data-open=${key}]`).click();check(await arch.locator('html').evaluate(e=>e.scrollWidth<=innerWidth+1),`${mode} ${key} fits ${width}`);check(await arch.locator('#detail-source').innerText()!=='',`${key} paper source retained`);if(width===1440)await page.waitForTimeout(550);if(width===1440)await page.screenshot({path:resolve(output,`detail-${mode}-${key}.png`)})}
-   await arch.locator('#back').click();await navigate('eeg');await eeg.locator('#sourceSelect').selectOption('upload');
+   for(const key of keys){await arch.locator(`.module-nav [data-open=${key}]`).click();check(await arch.locator('html').evaluate(e=>e.scrollWidth<=innerWidth+1),`${mode} ${key} fits ${width}`);check(await arch.locator('#detail-source,.visual-caption,.research-note').count()===0,`${key} source and notices removed`);if(width===1440)await page.waitForTimeout(550);if(width===1440)await page.screenshot({path:resolve(output,`detail-${mode}-${key}.png`)})}
+   await arch.locator('#back').click();await navigate('eeg');check(await eeg.locator('#sourceSelect,#modelSelect,#support0File,#support2File').count()===0,'Old controls removed');
    check(await eeg.locator('html').evaluate(e=>e.scrollWidth<=innerWidth+1),`${mode} upload fits ${width}`);
    await page.screenshot({path:resolve(output,`upload-${mode}-${width}.png`)});await menu();const box=await page.locator('.settings-panel').boundingBox();check(box.x>=0&&box.x+box.width<=width,`Settings fits ${width}`);await page.keyboard.press('Escape');
   }
  }
- await page.setViewportSize({width:1440,height:1100});await eeg.locator('#sourceSelect').selectOption('steady');await motion(true);await eeg.locator('#startBtn').click();await eeg.locator('#pulses circle').first().waitFor();
+ await page.setViewportSize({width:1440,height:1100});await selectMockUpload(eeg);await motion(true);await eeg.locator('#startBtn').click();await eeg.locator('#pulses circle').first().waitFor();
  await page.waitForFunction(()=>document.querySelector('#eeg-frame').contentWindow.__particleMoves>2);check(true,'Particles appear and move');await page.screenshot({path:resolve(output,'eeg-light-particles.png')});
  await eeg.locator('#pauseBtn').click();const held=await eeg.locator('#windowText').innerText();const frozen=await eeg.locator('#pulses circle').evaluateAll(ns=>ns.map(n=>n.getAttribute('cx')));await page.waitForTimeout(180);assert.deepEqual(await eeg.locator('#pulses circle').evaluateAll(ns=>ns.map(n=>n.getAttribute('cx'))),frozen);checks.push('Manual pause freezes particles');const wave=await eeg.locator('#eegCanvas').evaluate(c=>c.toDataURL());await page.waitForTimeout(150);check(await eeg.locator('#eegCanvas').evaluate(c=>c.toDataURL())===wave,'Manual pause freezes wave');
- await motion(false);check(await eeg.locator('#pulses circle').count()===0,'Motion off clears particles');await theme('dark');await navigate('architecture');await page.waitForTimeout(450);await navigate('eeg');check(await eeg.locator('#pauseBtn').innerText()==='Resume','Theme and motion preserve manual pause');check(await eeg.locator('#windowText').innerText()===held,'View and preference changes preserve window');
+ await motion(false);check(await eeg.locator('#pulses circle').count()===0,'Motion off clears particles');await theme('dark');await navigate('architecture');await page.waitForTimeout(450);await navigate('eeg');check(await eeg.locator('#pauseBtn').innerText()==='继续','Theme and motion preserve manual pause');check(await eeg.locator('#windowText').innerText()===held,'View and preference changes preserve window');
  await motion(true);await eeg.locator('#pauseBtn').click();await eeg.locator('#pulses circle').first().waitFor();checks.push('Motion on and Resume continue current propagation');
  await motion(false);await page.waitForTimeout(500);const after=await eeg.locator('#windowText').innerText();check(after!==held,'Motion off continues result playback');await page.screenshot({path:resolve(output,'eeg-dark-results.png')});
  await navigate('architecture');const hidden=await eeg.locator('#windowText').innerText();await page.waitForTimeout(700);check(await eeg.locator('#windowText').innerText()===hidden,'Hidden view suspends playback');await navigate('eeg');await motion(true);await eeg.locator('#pulses circle').first().waitFor();checks.push('Returning view resumes particles');

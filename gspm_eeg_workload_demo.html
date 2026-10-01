@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GSPM-Net EEG Workload Demo</title>
 <script>if(new URLSearchParams(location.search).get('embedded')==='1')document.documentElement.classList.add('portal-embed');</script>
-<script src="gspm_ui.js"></script><style>
+<script src="gspm_ui.js?v=20261001-centered"></script><style>
   :root{
     --bg:var(--ink-040b1a);
     --panel:var(--ink-071329);
@@ -142,83 +142,45 @@
 
 
 
-</style><link rel="stylesheet" href="gspm_shared_theme.css">
+</style><link rel="stylesheet" href="gspm_shared_theme.css?v=20261001-centered">
 </head>
-<body>
+<body class="eeg-demo">
 <div class="page">
   <div class="topbar">
     <div class="brand"><div class="brand-mark"></div><div>GSPM-Net <span>/ EEG workload demo</span></div></div>
     <div class="controls"><a id="architectureLink" class="btn" href="gspm_network_atlas.html" style="text-decoration:none;display:inline-flex;align-items:center">网络原理</a></div>
   </div>
-  <details class="demo-panel" open>
-    <summary>数据与模型</summary>
-    <div class="demo-form">
-      <label>数据来源<select id="sourceSelect"><option value="steady">示例一 · 平稳信号</option><option value="changing">示例二 · 变化信号</option><option value="upload">上传自己的 EEG</option></select></label>
-      <label id="modelField">模型折<select id="modelSelect"><option value="sub-01">sub-01 · 验证 sub-02</option></select></label>
-      <div class="form-actions portal-operation-bar">
-        <button id="pauseBtn" class="btn" type="button" disabled>Pause</button>
-        <button id="resetBtn" class="btn" type="button">Reset</button>
-        <button id="startBtn" class="btn primary" type="button">Start Analysis</button>
-      </div>
-    </div>
-    <div class="upload-grid" id="uploadGrid" hidden>
-      <section class="upload-card" id="queryField" aria-labelledby="queryTitle" hidden>
-        <h3 class="upload-title" id="queryTitle">查询 EEG</h3>
-        <p class="upload-description" id="queryDescription">需要分类的信号</p>
-        <div class="upload-info" aria-live="polite"><span class="upload-name">尚未选择文件</span><span class="upload-size"></span></div>
-        <input id="queryFile" type="file" accept=".csv,.npz,.set,.fdt" aria-label="查询 EEG" hidden>
-        <button class="upload-button" type="button" data-file-input="queryFile" aria-label="选择文件：查询 EEG" aria-describedby="queryDescription">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></svg>
-          <span>选择文件</span>
-        </button>
-      </section>
-      <section class="upload-card" id="support0Field" aria-labelledby="support0Title" hidden>
-        <h3 class="upload-title" id="support0Title">0-back 支持 EEG</h3>
-        <p class="upload-description" id="support0Description">已知 0-back 的校准信号</p>
-        <div class="upload-info" aria-live="polite"><span class="upload-name">尚未选择文件</span><span class="upload-size"></span></div>
-        <input id="support0File" type="file" accept=".csv,.npz,.set,.fdt" aria-label="0-back 支持 EEG" hidden>
-        <button class="upload-button" type="button" data-file-input="support0File" aria-label="选择文件：0-back 支持 EEG" aria-describedby="support0Description">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></svg>
-          <span>选择文件</span>
-        </button>
-      </section>
-      <section class="upload-card" id="support2Field" aria-labelledby="support2Title" hidden>
-        <h3 class="upload-title" id="support2Title">2-back 支持 EEG</h3>
-        <p class="upload-description" id="support2Description">已知 2-back 的校准信号</p>
-        <div class="upload-info" aria-live="polite"><span class="upload-name">尚未选择文件</span><span class="upload-size"></span></div>
-        <input id="support2File" type="file" accept=".csv,.npz,.set,.fdt" aria-label="2-back 支持 EEG" hidden>
-        <button class="upload-button" type="button" data-file-input="support2File" aria-label="选择文件：2-back 支持 EEG" aria-describedby="support2Description">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></svg>
-          <span>选择文件</span>
-        </button>
-      </section>
-    </div>
-    <div class="demo-note" id="demoNote">两个示例是固定合成 EEG，由真实 GSPM-Net 权重计算；示例结果不代表实测识别准确率。</div>
-    <div class="demo-note" id="uploadMessage" role="alert" hidden style="color:var(--ink-ffc49b);white-space:pre-line"></div>
-  </details>
-
   <div class="stage-shell">
     <div class="stage-wrap" id="stageWrap">
-      <section class="stage" id="stage">
-        <div class="divider d1"></div><div class="divider d2"></div>
+      <section class="stage" id="stage" aria-label="EEG 信号、网络与分类结果">
+  <section class="demo-panel compact-upload" aria-label="EEG 文件">
+      <section class="upload-card" id="queryField" aria-labelledby="queryTitle">
+        <h3 class="upload-title" id="queryTitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></svg>EEG 文件</h3>
+        <p class="upload-description" id="queryDescription">网页专用查询 NPZ · 自动识别被试与模型</p>
+        <div class="upload-info" aria-live="polite"><span class="upload-name">尚未选择文件</span><span class="upload-size"></span></div>
+        <input id="queryFile" type="file" accept=".npz" aria-label="上传 EEG" hidden>
+        <button class="upload-button" type="button" aria-label="选择 EEG 文件" aria-describedby="queryDescription">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></svg>
+          <span>选择文件</span>
+        </button>
+        <p id="matchStatus" class="match-status" role="status" aria-live="polite">等待上传</p>
+        <div class="demo-note" id="uploadMessage" role="alert" hidden style="color:var(--ink-ffc49b);white-space:pre-line"></div>
+      </section>
+  </section>
 
         <div class="col left">
-          <div class="eyebrow">Signal</div>
-          <h2>EEG Input</h2>
+          <h2>EEG 信号</h2>
           <div class="sub">62 channels</div>
           <div class="eeg-card"><canvas id="eegCanvas"></canvas></div>
-          <div class="eeg-meta"><strong>2 s EEG window</strong>Representative channels</div>
-          <div class="sample-tag">500 Hz</div>
+          <div class="eeg-meta">2 秒窗口<span class="sample-tag">— Hz</span></div>
         </div>
 
         <div class="col center">
           <div class="network-title">
-            <div class="eyebrow">Inference</div>
             <h2><span class="product-mark"><img class="logo-dark" src="assets/brand/gspm-dark.png" alt="GSPM-Net"><img class="logo-light" src="assets/brand/gspm-light.png" alt="GSPM-Net"></span></h2>
-            <div class="sub">Feature Learning</div>
           </div>
           <div class="network-box">
-            <svg id="networkSvg" viewBox="0 0 780 515" aria-label="Animated neural network visualization">
+            <svg id="networkSvg" viewBox="35 50 750 415" role="img" aria-label="GSPM-Net 神经网络数据流">
               <defs>
                 <linearGradient id="edgeGrad" gradientUnits="userSpaceOnUse" x1="78" y1="0" x2="710" y2="0"><stop offset="0%" stop-color="var(--ink-2dd6ff)"/><stop offset="55%" stop-color="var(--ink-4c88ff)"/><stop offset="100%" stop-color="var(--ink-ba55ff)"/></linearGradient>
                 <filter id="softGlow" filterUnits="userSpaceOnUse" x="40" y="50" width="710" height="410" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="1.9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -231,42 +193,46 @@
               <g id="pulses"></g>
             </svg>
           </div>
-          <div class="flow-note">Status: <span class="phase" id="phaseText">Idle</span></div>
         </div>
 
         <div class="col right">
-          <div class="eyebrow">Decision</div>
-          <h2>Workload<br>Recognition</h2>
+          <h2>分类结果</h2>
           <div class="sub" id="decisionSub">当前 2 秒窗口模型概率</div>
           <div class="result-area">
             <div class="result-card zero" id="card0">
-              <div class="label-row"><div><div class="class-name">0-back</div><div class="meaning">Low workload</div></div><div class="pct" id="pct0">—</div></div>
+              <div class="label-row"><div><div class="class-name">0-back</div><div class="meaning">低负荷</div></div><div class="pct" id="pct0">—</div></div>
               <div class="bar"><div class="fill" id="bar0"></div></div>
             </div>
             <div class="result-card two" id="card2">
-              <div class="label-row"><div><div class="class-name">2-back</div><div class="meaning">High workload</div></div><div class="pct" id="pct2">—</div></div>
+              <div class="label-row"><div><div class="class-name">2-back</div><div class="meaning">高负荷</div></div><div class="pct" id="pct2">—</div></div>
               <div class="bar"><div class="fill" id="bar2"></div></div>
             </div>
-            <div class="final-decision" id="finalDecision" hidden>
+            <div class="final-decision is-pending" id="finalDecision">
               <div class="final-caption">整段最终判断</div>
               <div class="final-class" id="finalClass">—</div>
-              <div class="final-votes" id="finalVotes"></div>
+              <div class="final-votes" id="finalVotes">等待分析结果</div>
             </div>
-            <div class="status waiting" id="statusCard"><strong><span class="dot"></span><span id="statusTitle">待分析</span></strong><span id="statusDetail"></span></div>
           </div>
-          <div class="legend">Blue: input-side activity<br>Purple: output-side activity</div>
         </div>
+        <section class="playback-dock" aria-label="分析与播放控制">
+          <div class="form-actions portal-operation-bar">
+            <button id="startBtn" class="btn primary" type="button" disabled>开始分析</button>
+            <button id="pauseBtn" class="btn" type="button" disabled>暂停</button>
+            <button id="resetBtn" class="btn" type="button">重置</button>
+          </div>
+          <div class="window-meta"><span id="windowText">Window —</span><span id="timeText">—</span><span id="dataText">等待数据</span></div>
+          <div class="status waiting" id="statusCard" role="status"><strong><span class="dot"></span><span id="statusTitle">待分析</span></strong><span id="statusDetail"></span></div>
+          <div class="flow-note"><span class="phase" id="phaseText">Idle</span></div>
+        </section>
       </section>
     </div>
   </div>
-  <div class="window-meta"><span id="windowText">Window —</span><span id="timeText">—</span><span id="dataText">等待数据</span></div>
   <div class="footnote">Interactive visualization for EEG workload classification.</div>
 </div>
 
 <script>
 (() => {
   const stage = document.getElementById('stage');
-  const wrap = document.getElementById('stageWrap');
   const startBtn = document.getElementById('startBtn');
   const resetBtn = document.getElementById('resetBtn');
   const phaseText = document.getElementById('phaseText');
@@ -280,14 +246,10 @@
   const pct2 = document.getElementById('pct2');
   const bar0 = document.getElementById('bar0');
   const bar2 = document.getElementById('bar2');
-  const sourceSelect = document.getElementById('sourceSelect');
-  const modelSelect = document.getElementById('modelSelect');
   const queryFile = document.getElementById('queryFile');
-  const support0File = document.getElementById('support0File');
-  const support2File = document.getElementById('support2File');
-  const queryField = document.getElementById('queryField');
-  const support0Field = document.getElementById('support0Field');
-  const support2Field = document.getElementById('support2Field');
+  const uploadButton = document.querySelector('.upload-button');
+  const matchStatus = document.getElementById('matchStatus');
+  let preparedSelection=null, selectionToken=0, preparing=false;
   const pauseBtn = document.getElementById('pauseBtn');
   const statusCard = document.getElementById('statusCard');
   const statusTitle = document.getElementById('statusTitle');
@@ -304,17 +266,6 @@
   let viewActive=!portalEmbedded,pageVisible=!document.hidden;
   function canAnimate(){return viewActive&&pageVisible&&!document.hidden;}
   function notifyReady(){if(portalEmbedded)parent.postMessage({type:'gspm:ready',view:'eeg'},location.origin);}
-
-  // ----- responsive fixed-aspect stage -----
-  function scaleStage(){
-    const maxW = Math.max(1, window.innerWidth - 32);
-    const s = Math.min(1, maxW / 1280);
-    stage.style.transform = `scale(${s})`;
-    stage.style.transformOrigin = 'top left';
-    wrap.style.width = `${1280 * s}px`;
-    wrap.style.height = `${720 * s}px`;
-  }
-  window.addEventListener('resize', scaleStage); scaleStage();
 
   // ----- EEG canvas -----
   const canvas = document.getElementById('eegCanvas');
@@ -340,7 +291,8 @@
     ctx.clearRect(0,0,w,h);
     ctx.strokeStyle = wavePalette.grid; ctx.lineWidth = 1;
     for(let y=44;y<h;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-    const top=32,bottom=h-26; const rows=channelSeeds.length;
+    const top=Math.min(32,h*.1),bottom=h-Math.min(26,h*.1); const rows=channelSeeds.length;
+    const rowSpacing=(bottom-top)/(rows-1),sampleAmplitude=Math.min(18,rowSpacing*.35);
     channelSeeds.forEach((seed,i)=>{
       const y = top + i*(bottom-top)/(rows-1);
       ctx.beginPath();
@@ -351,11 +303,11 @@
           const values = currentWave[i];
           let peak = 1;
           for(let k=0;k<values.length;k+=Math.max(1,Math.floor(values.length/80))) peak=Math.max(peak,Math.abs(values[k]));
-          yy = y - (Number(values[sample]||0)/peak)*18;
+          yy = y - (Number(values[sample]||0)/peak)*sampleAmplitude;
         }else{
           const xx=x/w*18 + eegT;
           const transient = Math.sin(xx*13+seed*2.3)*Math.sin(xx*.55+seed)*.08;
-          const amp = 9 + 6*waveBoost;
+          const amp = Math.min(9 + 6*waveBoost,rowSpacing*.4);
           yy = y + (noise(xx,seed)+transient)*amp;
         }
         if(x===12) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
@@ -368,7 +320,8 @@
     const mid=h/2; [mid-8,mid,mid+8].forEach(y=>{ctx.beginPath();ctx.arc(w-18,y,1.7,0,Math.PI*2);ctx.fill();});
     if(motionEnabled){if(!paused)eegT += .028 + waveBoost*.01;raf=requestAnimationFrame(drawEEG);}else raf=0;
   }
-  resizeCanvas(); window.addEventListener('resize',resizeCanvas); drawEEG();
+  resizeCanvas(); drawEEG();
+  new ResizeObserver(()=>{resizeCanvas();if(!motionEnabled&&canAnimate())drawEEG();}).observe(canvas.parentElement);
 
   // ----- network layout -----
   const layerXs = [78, 235, 392, 549, 684];
@@ -481,75 +434,69 @@
       return body;
     });
   }
-  const uploadInputs=[queryFile,support0File,support2File];
   const uploadMessage=document.getElementById('uploadMessage');
   function showUploadMessage(message){uploadMessage.textContent=message;uploadMessage.hidden=!message;}
-  function validateSelection(input){
-    const files=Array.from(input.files),title=input.closest('.upload-card').querySelector('.upload-title').textContent;
-    if(!files.length)return `${title}：请选择文件。`;
-    const mains=files.filter(f=>/\.(set|npz|csv)$/i.test(f.name));
-    if(mains.length!==1)return `${title}：请选择一个 NPZ / CSV，或同时选择同一记录的 SET 和 FDT。FDT 不能单独使用。`;
-    if(!/\.set$/i.test(mains[0].name)&&files.length!==1)return `${title}：NPZ / CSV 每栏只选一个文件。`;
-    if(files.some(f=>!/\.(set|fdt|npz|csv)$/i.test(f.name)))return `${title}：不支持该文件格式。`;
-    if(input===support0File&&files.some(f=>/(oneBACK|twoBACK)/i.test(f.name)))return '0-back 支持 EEG：请选择 zeroBACK，oneBACK 是 1-back，twoBACK 是 2-back。';
-    if(input===support2File&&files.some(f=>/(oneBACK|zeroBACK)/i.test(f.name)))return '2-back 支持 EEG：请选择 twoBACK。';
-    return '';
-  }
-  function syncUploadCard(input){
-    const card=input.closest('.upload-card'), files=Array.from(input.files), file=files[0];
-    const name=card.querySelector('.upload-name'), size=card.querySelector('.upload-size');
-    const button=card.querySelector('.upload-button');
-    name.textContent=file?files.map(f=>f.name).join(' + '):'尚未选择文件';
-    name.title=file?files.map(f=>f.name).join('\n'):'';
-    if(file){
-      const total=files.reduce((sum,f)=>sum+f.size,0);
-      const unit=total>=1048576?'MB':total>=1024?'KB':'B';
-      const divisor=unit==='MB'?1048576:unit==='KB'?1024:1;
-      size.textContent=(total/divisor).toLocaleString('zh-CN',{maximumFractionDigits:1})+' '+unit+` · ${files.length} 个文件`;
-    }else size.textContent='';
-    const action=file?'更换文件':'选择文件';
-    button.querySelector('span').textContent=action;
-    button.setAttribute('aria-label',action+'：'+card.querySelector('.upload-title').textContent);
+  function syncUploadCard(){
+    const card=queryFile.closest('.upload-card'),file=queryFile.files[0];
+    card.querySelector('.upload-name').textContent=file?file.name:'尚未选择文件';
+    card.querySelector('.upload-name').title=file?file.name:'';
+    card.querySelector('.upload-size').textContent=file?`${(file.size/1048576).toLocaleString('zh-CN',{maximumFractionDigits:1})} MB`:'';
     card.classList.toggle('has-file',Boolean(file));
+    uploadButton.querySelector('span').textContent=file?'更换文件':'选择文件';
+    uploadButton.setAttribute('aria-label',file?'更换 EEG 文件':'选择 EEG 文件');
   }
-  uploadInputs.forEach(input=>{
-    input.multiple=true;
-    input.closest('.upload-card').querySelector('.upload-button').addEventListener('click',()=>input.click());
-    input.addEventListener('change',()=>{syncUploadCard(input);showUploadMessage(validateSelection(input));});
-    input.addEventListener('cancel',()=>syncUploadCard(input));
-  });
-  function updateUploadFields(){
-    const upload=sourceSelect.value==='upload';
-    showUploadMessage('');
-    document.getElementById('uploadGrid').hidden=!upload;
-    [queryField,support0Field,support2Field].forEach(el=>el.hidden=!upload);
-    modelSelect.disabled=false;
-    if(!upload){queryFile.value='';support0File.value='';support2File.value='';}
-    uploadInputs.forEach(syncUploadCard);
-    document.getElementById('demoNote').textContent=upload
-      ?'推荐选择“真实数据测试 / 网页上传数据”中同一被试、同一 session 的三个 NPZ。原始 SET/FDT 请按住 Ctrl 成对选择；0-back 对应 zeroBACK，不能使用 oneBACK。查询与支持样本须独立。'
-      :'两个示例是固定合成 EEG，由真实 GSPM-Net 权重计算；示例结果不代表实测识别准确率。';
+  function syncControls(){
+    startBtn.disabled=busy||preparing||!preparedSelection;
+    uploadButton.disabled=busy;queryFile.disabled=busy;
+    pauseBtn.disabled=!busy||!analysis;
   }
+  async function prepareSelection(){
+    const token=++selectionToken;
+    runToken++;paused=false;busy=false;analysis=null;currentIndex=0;preparedSelection=null;
+    clearVisuals();pauseBtn.textContent='暂停';showUploadMessage('');syncUploadCard();
+    queryFile.closest('.upload-card').classList.remove('is-matched');
+    const file=queryFile.files[0];preparing=Boolean(file);syncControls();
+    if(!file){matchStatus.textContent='等待上传';setStatus('waiting','待分析','');return;}
+    matchStatus.textContent='正在读取文件并自动匹配…';setStatus('computing','正在匹配','');
+    try{
+      if(queryFile.files.length!==1||!file.name.toLowerCase().endsWith('.npz'))throw new Error('请选择一个网页专用查询 NPZ；其他格式请使用完整工作台。');
+      if(file.size>256*1048576)throw new Error('单个文件不能超过 256 MB。');
+      const record=await uploadRecording(file);
+      if(token!==selectionToken)return;
+      const matched=await api(`/api/recordings/${record.id}/prepare-analysis`,{method:'POST'});
+      if(token!==selectionToken)return;
+      preparedSelection={...matched,recording_id:record.id};
+      queryFile.closest('.upload-card').classList.add('is-matched');
+      matchStatus.textContent=`${matched.subject} · ${matched.session} · 已自动匹配`;
+      setStatus('ready','准备就绪','');
+    }catch(error){
+      if(token!==selectionToken)return;
+      matchStatus.textContent='无法自动匹配';setStatus('waiting','无法准备分析','原因见上传浮窗');showUploadMessage(error.message);
+    }finally{if(token===selectionToken){preparing=false;syncControls();}}
+  }
+  uploadButton.addEventListener('click',()=>queryFile.click());
+  queryFile.addEventListener('change',prepareSelection);
+  queryFile.addEventListener('cancel',syncUploadCard);
   function clearVisuals(){
     document.querySelector('.sample-tag').textContent='— Hz';
     clearNetwork(); stage.classList.remove('running'); waveBoost=.42; setPhase('Idle'); currentWave=null;if(!motionEnabled&&canAnimate())drawEEG();
     card0.classList.remove('winner'); card2.classList.remove('winner');
     bar0.style.width='0%'; bar2.style.width='0%'; pct0.textContent='—'; pct2.textContent='—';
     windowText.textContent='Window —'; timeText.textContent='—'; dataText.textContent='等待数据';
-    finalDecision.hidden=true;finalClass.textContent='—';finalVotes.textContent='';
+    finalDecision.classList.add('is-pending');finalClass.textContent='—';finalVotes.textContent='等待分析结果';
     decisionSub.textContent='当前 2 秒窗口模型概率';
   }
   function showFinalDecision(job){
     if(job.final_class_label!==0&&job.final_class_label!==2)return;
     finalClass.textContent=`${job.final_class_label}-back`;
     finalVotes.textContent=`0-back ${job.vote_0} 票 · 2-back ${job.vote_2} 票 · 共 ${job.rows.length} 个窗口`;
-    finalDecision.hidden=false;
+    finalDecision.classList.remove('is-pending');
   }
   async function reset(full=true){
     runToken++; if(playbackTimer)clearTimeout(playbackTimer); playbackTimer=null; paused=false;
     clearVisuals(); setStatus('waiting','待分析','');
-    pauseBtn.textContent='Pause'; pauseBtn.disabled=true;
-    if(full){startBtn.disabled=false; busy=false; analysis=null; currentIndex=0;}
+    pauseBtn.textContent='暂停'; pauseBtn.disabled=true;
+    if(full){busy=false;analysis=null;currentIndex=0;syncControls();}
   }
 
   function waitPlayback(ms,token,propagation=false){
@@ -568,14 +515,14 @@
   }
   async function playWindow(index,token){
     if(token!==runToken || !analysis)return;
-    if(index>=analysis.rows.length){busy=false;startBtn.disabled=false;pauseBtn.disabled=true;setPhase('Complete');setStatus('ready','Analysis complete','模型结果已完成，动画用于展示对应窗口的数据流。');return;}
+    if(index>=analysis.rows.length){busy=false;syncControls();setPhase('Complete');setStatus('ready','分析完成','');return;}
     currentIndex=index; const row=analysis.rows[index]; currentWave=analysis.wave?.[index]||null;if(!motionEnabled&&canAnimate())drawEEG(); stage.classList.add('running'); clearNetwork();
     document.querySelector('.sample-tag').textContent=`${analysis.sfreq} Hz`;
     const useState=analysis.temporal_enabled; const p0=useState?row.state_prob_0:row.prob_0; const p2=useState?row.state_prob_2:row.prob_2; const target=row.class_label===2?1:0;
     pct0.textContent=`${(p0*100).toFixed(1)}%`; pct2.textContent=`${(p2*100).toFixed(1)}%`; bar0.style.width=`${(p0*100).toFixed(1)}%`; bar2.style.width=`${(p2*100).toFixed(1)}%`;
     card0.classList.toggle('winner',target===0); card2.classList.toggle('winner',target===1); layers[4][1-target].el.classList.add('dim'); activateNode(layers[4][target],true);
     windowText.textContent=`Window ${row.window} / ${analysis.rows.length}`; timeText.textContent=`${row.start_sec.toFixed(1)}–${row.end_sec.toFixed(1)} s`; dataText.textContent=analysis.mode==='demo-real'?'固定示例 · 真实权重':'上传记录 · 真实推理';
-    setStatus('ready','Model result ready',`第 ${row.window} 个窗口的模型输出已返回，开始播放对应数据流。`); waveBoost=1.15;
+    setStatus('ready','播放中',''); waveBoost=1.15;
     setPhase('Feature propagation'); const groups=chooseActiveEdges(target);
     for(let li=0;li<4;li++){
       if(token!==runToken)return;
@@ -593,61 +540,34 @@
     while(token===runToken){const job=await api(path); if(job.status==='complete')return job; if(job.status==='failed')throw new Error(job.error||'模型推理失败'); setStatus('computing','正在分析',`分析进度 ${job.progress||0}%`); await new Promise(r=>setTimeout(r,240));}
     throw new Error('任务已取消。');
   }
-  async function uploadRecording(files){
-    const form=new FormData(); for(const file of files)form.append('files',file); form.append('sfreq','500'); form.append('unit','uV');
+  async function uploadRecording(file){
+    const form=new FormData();form.append('files',file);
     return api('/api/recordings',{method:'POST',body:form});
   }
   async function runAnalysis(){
-    showUploadMessage('');
-    if(busy)return; busy=true; runToken++; const token=runToken; startBtn.disabled=true; pauseBtn.disabled=false; clearVisuals(); stage.classList.add('running'); setStatus('computing','正在分析','正在处理 EEG 信号。'); setPhase('Reading EEG');
+    if(busy||preparing||!preparedSelection)return;
+    showUploadMessage('');busy=true;paused=false;analysis=null;runToken++;const token=runToken;
+    pauseBtn.textContent='暂停';syncControls();clearVisuals();stage.classList.add('running');
+    setStatus('computing','正在分析','正在处理 EEG 信号。');setPhase('Reading EEG');
     try{
-      let job;
-      if(sourceSelect.value!=='upload'){
-        const queued=await api('/api/demo/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({example_id:sourceSelect.value,model_id:modelSelect.value})});
-        job=await poll(`/api/demo/analyses/${queued.id}`,token);
-      }else{
-        for(const input of uploadInputs){const error=validateSelection(input);if(error)throw new Error(error);}
-        setStatus('computing','Loading EEG records','正在检查采样率、通道和有效窗口。');
-        const [q,s0,s2]=await Promise.all([uploadRecording(Array.from(queryFile.files)),uploadRecording(Array.from(support0File.files)),uploadRecording(Array.from(support2File.files))]);
-        if([s0,s2].some(s=>s.fingerprint===q.fingerprint))throw new Error('查询与支持使用了同一段信号。请选择“网页上传数据”文件夹内单独划分的查询和支持 NPZ。');
-        const prepared=[q,s0,s2].map(r=>r.prepared);
-        let subject=modelSelect.value,session='upload-session',shots=20,window_mode='continuous',event_types=[];
-        if(prepared.some(Boolean)){
-          if(!prepared.every(Boolean))throw new Error('请全部选择网页专用 NPZ，不要混用原始记录。');
-          if(prepared.some(p=>p.subject!==prepared[0].subject||p.session!==prepared[0].session))throw new Error('三个文件须来自同一被试、同一 session 文件夹。');
-          if(prepared.map(p=>p.role).join(',')!=='query,support0,support2')throw new Error('文件放错位置：请按查询、支持_0-back、支持_2-back 分别选择。');
-          subject=prepared[0].subject;session=prepared[0].session;shots=prepared[1].onsets.length;
-          if(modelSelect.value!==subject)throw new Error(`请将模型折改为 ${subject}，与上传被试一致。`);
-          if(shots!==prepared[2].onsets.length)throw new Error('两类支持窗口数量不一致。');
-        }else{
-          const stimulus=['6021','6022','6221','6222'];
-          const hasStimulus=[q,s0,s2].map(r=>r.event_types?.some(t=>stimulus.includes(t)));
-          if(hasStimulus.some(Boolean)&&!hasStimulus.every(Boolean))throw new Error('部分记录缺少 0-back / 2-back 刺激事件；请检查任务及文件配对。');
-          if(hasStimulus.every(Boolean)){window_mode='events';event_types=stimulus;}
-        }
-        document.getElementById('demoNote').textContent=prepared.every(Boolean)
-          ?`${subject} · ${session} · 每类 ${shots} 个支持窗口 · 使用已预处理的刺激窗口`
-          :`原始 EEG · ${window_mode==='events'?'按 0-back / 2-back 刺激事件分窗':'连续 2 秒分窗（非论文刺激对齐）'} · 每类 20 个支持窗口（应用校准）`;
-        setStatus('computing','Building calibration','正在用当前 session 的支持窗口建立个人校准档案。');
-        const calibration=await api('/api/calibrations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_0:s0.id,record_2:s2.id,subject,session,shots,model_id:modelSelect.value,window_mode,event_types})});
-        const queued=await api('/api/analyses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recording_id:q.id,calibration_id:calibration.id,subject,session,window_mode,event_types})});
-        job=await poll(`/api/analyses/${queued.id}`,token);
-      }
-      if(token!==runToken)return;analysis=job;currentIndex=0;decisionSub.textContent=job.temporal_enabled?'当前 2 秒窗口 · 时序概率':'当前 2 秒窗口 · 原型概率';showFinalDecision(job);setStatus('ready','分析结果已就绪',`整段最终判断：${job.final_class_label}-back。正在展示各时间窗口。`);await playWindow(0,token);
-    }catch(error){if(token===runToken){busy=false;startBtn.disabled=false;pauseBtn.disabled=true;stage.classList.remove('running');setPhase('Error');setStatus('waiting','无法分析',error.message);showUploadMessage(error.message);}}
+      const {recording_id,calibration_id,subject,session,window_mode,event_types}=preparedSelection;
+      const queued=await api('/api/analyses',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({recording_id,calibration_id,subject,session,window_mode,event_types})});
+      const job=await poll(`/api/analyses/${queued.id}`,token);
+      if(token!==runToken)return;
+      analysis=job;currentIndex=0;syncControls();
+      decisionSub.textContent=job.temporal_enabled?'当前 2 秒窗口 · 时序概率':'当前 2 秒窗口 · 原型概率';
+      showFinalDecision(job);setStatus('ready','分析结果已就绪','');
+      await playWindow(0,token);
+    }catch(error){if(token===runToken){busy=false;syncControls();stage.classList.remove('running');setPhase('Error');setStatus('waiting','无法分析','原因见上传浮窗');showUploadMessage(error.message);}}
   }
 
   window.addEventListener('gspm:preferenceschange',event=>{motionEnabled=event.detail.motion;reduceMotion=!motionEnabled;syncWavePalette();if(raf){cancelAnimationFrame(raf);raf=0}if(!motionEnabled){pulsesG.replaceChildren();edges.forEach(e=>e.el.classList.remove('active','hot'))}if(canAnimate())drawEEG();});
   document.addEventListener('visibilitychange',()=>{pageVisible=!document.hidden;if(!pageVisible&&raf){cancelAnimationFrame(raf);raf=0}else if(pageVisible&&viewActive&&!raf)drawEEG()});
   startBtn.addEventListener('click',runAnalysis);
   resetBtn.addEventListener('click',()=>reset(true));
-  pauseBtn.addEventListener('click',()=>{paused=!paused;pauseBtn.textContent=paused?'Resume':'Pause';setStatus(paused?'waiting':'ready',paused?'Playback paused':'Model result ready',paused?'暂停只影响动画播放，不会改变已返回的模型输出。':'继续播放当前窗口的数据流。');});
-  sourceSelect.addEventListener('change',updateUploadFields);
-  api('/api/status').then(status=>{
-    const folds=status.model?.folds||[]; modelSelect.innerHTML=''; folds.filter(f=>f.ready).forEach(f=>{const option=document.createElement('option');option.value=f.id;option.textContent=`${f.id} · 验证 ${f.validation_subject||'独立样本'}`;modelSelect.appendChild(option);});
-    if(!modelSelect.options.length){const option=document.createElement('option');option.value='sub-01';option.textContent='sub-01';modelSelect.appendChild(option);}
-  }).catch(()=>setStatus('waiting','Model status unavailable','请先启动本机 GSPM-Net 服务。'));
-  updateUploadFields();
+  pauseBtn.addEventListener('click',()=>{paused=!paused;pauseBtn.textContent=paused?'继续':'暂停';setStatus(paused?'waiting':'ready',paused?'播放已暂停':'播放中','');});
+  syncUploadCard();syncControls();
   if(portalEmbedded){
     window.addEventListener('message',event=>{if(event.source!==parent||event.origin!==location.origin)return;const data=event.data;if(!data||data.type!=='gspm:visibility'||data.view!=='eeg'||typeof data.visible!=='boolean'||typeof data.tabVisible!=='boolean')return;const was=canAnimate();viewActive=data.visible;pageVisible=data.tabVisible;const active=canAnimate();if(was&&!active&&raf){cancelAnimationFrame(raf);raf=0;}else if(!was&&active&&!raf)drawEEG();});
     document.addEventListener('visibilitychange',()=>{pageVisible=!document.hidden;if(pageVisible&&viewActive&&!raf)drawEEG();});

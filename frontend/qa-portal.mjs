@@ -1,3 +1,4 @@
+import {mockUploadAnalysis,selectMockUpload} from './qa-upload-fixture.mjs';
 import {chromium} from '@playwright/test';
 import {mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -12,6 +13,7 @@ try{
   page.setDefaultTimeout(8000);
   page.on('page',child=>child.on('pageerror',e=>failures.push(e.message)));
   page.on('pageerror',e=>failures.push(e.message));
+  await mockUploadAnalysis(page,{windows:20,delay:1500});
   await page.goto(`${origin}/portal.html#architecture`);
   const tabs={getByText:name=>({click:async()=>{await page.locator('.settings-trigger').click();await page.locator(`[data-page=${name==='EEG 分类'?'eeg':'architecture'}]`).click();await page.waitForTimeout(280)}})},architecture=page.frameLocator('#architecture-frame'),eeg=page.frameLocator('#eeg-frame');
   await architecture.locator('.node').first().waitFor();
@@ -23,11 +25,7 @@ try{
   await eeg.locator('#queryFile').waitFor({state:'attached'});
   await eeg.locator('#architectureLink').waitFor({state:'attached'});
   await page.screenshot({path:fileURLToPath(new URL('eeg-view.png',output)),animations:'disabled'});
-  await eeg.locator('#sourceSelect').selectOption('upload');
-  const sample=(name)=>({name,type:'text/csv',buffer:Buffer.from('channel,signal\nAF3,0.12\nAF4,-0.08\n')});
-  await eeg.locator('#queryFile').setInputFiles(sample('query.csv'));
-  await eeg.locator('#support0File').setInputFiles(sample('support-0.csv'));
-  await eeg.locator('#support2File').setInputFiles(sample('support-2.csv'));
+  await selectMockUpload(eeg);
   const eegInstance=await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.__qaInstance??=(Math.random()));
   for(let i=0;i<10;i++){await tabs.getByText('网络原理').click();await tabs.getByText('EEG 分类').click()}
   await page.locator('#architecture-frame').evaluate(f=>f.contentWindow.scrollTo(0,320));
@@ -39,8 +37,8 @@ try{
   await page.locator('#eeg-frame').evaluate(f=>{const w=f.contentWindow;w.history.replaceState(null,'',w.location.pathname+w.location.search)});
   await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.scrollTo(0,360));const eegScroll=await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.scrollY);
   await tabs.getByText('EEG 分类').click();
-  for(const id of ['queryFile','support0File','support2File'])check(await eeg.locator(`#${id}`).evaluate(el=>el.files.length===1),`${id} FileList retained`);
-  check(await eeg.locator('#sourceSelect').inputValue()==='upload','EEG data source retained');check(await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.scrollY)===eegScroll,'EEG scroll retained');
+  for(const id of ['queryFile'])check(await eeg.locator(`#${id}`).evaluate(el=>el.files.length===1),`${id} FileList retained`);
+  check((await eeg.locator('#matchStatus').innerText()).includes('已自动匹配'),'Automatic match retained');check(await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.scrollY)===eegScroll,'EEG scroll retained');
   check(await page.locator('#eeg-frame').evaluate(f=>f.contentWindow.__qaInstance)===eegInstance,'EEG frame instance retained');
   await tabs.getByText('网络原理').click();
   if(await architecture.locator('#detail').isVisible())await architecture.getByRole('button',{name:'返回整体架构'}).click();
@@ -53,13 +51,13 @@ try{
   check(await page.locator('.settings-panel').evaluate(el=>el.querySelector('[aria-current="page"]')?.textContent.replace('✓',''))==='EEG 分类','Browser forward updates active view');
   await page.goto(`${origin}/portal.html#eeg`);await eeg.locator('#queryFile').waitFor({state:'attached'});await page.waitForFunction(()=>document.querySelector('.settings-panel [aria-current="page"]')?.dataset.page==='eeg');
   check(await page.locator('.settings-panel').evaluate(el=>el.querySelector('[aria-current="page"]')?.textContent.replace('✓',''))==='EEG 分类','Direct EEG route');
-  await eeg.locator('#sourceSelect').selectOption('steady');
-  const queuedResponse=page.waitForResponse(r=>r.url().endsWith('/api/demo/analyses')&&r.request().method()==='POST');
+  await selectMockUpload(eeg);
+  const queuedResponse=page.waitForResponse(r=>r.url().endsWith('/api/analyses')&&r.request().method()==='POST');
   await eeg.locator('#startBtn').click();
   const queued=await(await queuedResponse).json();
   await tabs.getByText('网络原理').click();
   const completeResponse=page.waitForResponse(async r=>{
-    if(!r.url().includes(`/api/demo/analyses/${queued.id}`)||r.request().method()!=='GET'||!r.ok())return false;
+    if(!r.url().includes(`/api/analyses/${queued.id}`)||r.request().method()!=='GET'||!r.ok())return false;
     try{return (await r.json()).status==='complete'}catch{return false}
   },{timeout:60000});
   await completeResponse;
@@ -70,9 +68,9 @@ try{
   await tabs.getByText('网络原理').click();await page.waitForTimeout(700);
   await tabs.getByText('EEG 分类').click();
   check(await eeg.locator('#windowText').innerText()===heldWindow,'EEG playback window retained while hidden');
-  check(await eeg.locator('#pauseBtn').innerText()==='Resume','Manual playback pause retained while hidden');
+  check(await eeg.locator('#pauseBtn').innerText()==='继续','Manual playback pause retained while hidden');
   await eeg.locator('#pauseBtn').click();
-  check(await eeg.locator('#pauseBtn').innerText()==='Pause','Playback resumes after returning to EEG');
+  check(await eeg.locator('#pauseBtn').innerText()==='暂停','Playback resumes after returning to EEG');
   check(await eeg.locator('#finalClass').innerText()!=='—','Backend analysis result retained after view switch');
   for(const width of [1440,1280,390]){
     await page.setViewportSize({width,height:width===390?844:900});

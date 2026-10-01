@@ -1,3 +1,4 @@
+import {mockUploadAnalysis,selectMockUpload} from './qa-upload-fixture.mjs';
 import {chromium} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
@@ -9,9 +10,8 @@ try{
  for(const theme of ['dark','light']){
   const page=await browser.newPage({viewport:{width:1440,height:1100}});page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(mode=>localStorage.setItem('gspm.preferences.v1',JSON.stringify({theme:mode,motion:true})),theme);
-  await page.route('**/api/demo/analyses',r=>r.fulfill({json:{id:'top-row'}}));
-  await page.route('**/api/demo/analyses/top-row',r=>r.fulfill({json:{status:'complete',mode:'demo-real',temporal_enabled:false,sfreq:250,final_class_label:0,vote_0:1,vote_2:0,rows:[{window:1,start_sec:0,end_sec:2,prob_0:.8,prob_2:.2,class_label:0}]}}));
-  await page.goto('http://127.0.0.1:8000/portal.html#architecture');const arch=page.frameLocator('#architecture-frame'),eeg=page.frameLocator('#eeg-frame');await arch.locator('.node').first().waitFor();
+  await mockUploadAnalysis(page,{id:'top-row',windows:1});
+  await page.goto((process.env.PORTAL_ORIGIN||'http://127.0.0.1:8000')+'/portal.html#architecture');const arch=page.frameLocator('#architecture-frame'),eeg=page.frameLocator('#eeg-frame');await arch.locator('.node').first().waitFor();
   assert.equal(await page.locator('.gspm-brand span').innerText(),'思维轨迹');
   for(const width of [1440,1280,390]){
    await page.setViewportSize({width,height:width===390?844:1100});
@@ -21,11 +21,12 @@ try{
    assert(await arch.locator('html').evaluate(e=>e.scrollWidth<=innerWidth+1));await page.screenshot({path:resolve(out,`architecture-${theme}-${width}.png`)});
   }
   await page.setViewportSize({width:1440,height:1100});await page.locator('.settings-trigger').click();await page.locator('[data-page=eeg]').click();await eeg.locator('#networkSvg').waitFor();await page.waitForTimeout(280);
-  await eeg.locator('#startBtn').click();const first=eeg.locator('#pulses circle[data-from=L0N0][data-to=L1N0]');await first.waitFor();const x=Number(await first.getAttribute('cx'));await page.waitForTimeout(65);assert(Number(await first.getAttribute('cx'))>x,'First-row particle moves on the horizontal connection');assert.equal(Number(await first.getAttribute('cy')),90);
+  await selectMockUpload(eeg);await eeg.locator('#startBtn').click();const first=eeg.locator('#pulses circle[data-from=L0N0][data-to=L1N0]');await first.waitFor();const x=Number(await first.getAttribute('cx'));await page.waitForTimeout(65);assert(Number(await first.getAttribute('cx'))>x,'First-row particle moves on the horizontal connection');assert.equal(Number(await first.getAttribute('cy')),90);
   await eeg.locator('#pauseBtn').click();const held=await first.getAttribute('cx');await page.waitForTimeout(300);assert.equal(await first.getAttribute('cx'),held,'Pause freezes first-row particle');
   const network=resolve(out,`network-${theme}.png`);await eeg.locator('#networkSvg').screenshot({path:network});await page.screenshot({path:resolve(out,`eeg-${theme}.png`)});
   if(theme==='dark'){
-   const pixels=spawnSync('python',['-c',"from PIL import Image;import sys;im=Image.open(sys.argv[1]).convert('RGB');b=sum(im.getpixel((x,90))[2] for x in range(170,210))/40;assert b>60,f'horizontal edge is missing: {b}';print('Horizontal edge blue intensity:',round(b,1))",network],{encoding:'utf8'});assert.equal(pixels.status,0,pixels.stderr);console.log(pixels.stdout.trim());
+   const samples=await eeg.locator('#networkSvg').evaluate(svg=>{const r=svg.getBoundingClientRect(),m=svg.getScreenCTM();return Array.from({length:40},(_,i)=>{const p=new DOMPoint(170+i,90).matrixTransform(m);return [Math.round(p.x-r.x),Math.round(p.y-r.y)]})});
+   const pixels=spawnSync('python',['-c',"from PIL import Image;import sys,json;im=Image.open(sys.argv[1]).convert('RGB');p=json.loads(sys.argv[2]);b=sum(max(im.getpixel((x,y+d))[2] for d in [-1,0,1]) for x,y in p)/len(p);assert b>60,f'horizontal edge is missing: {b}';print('Horizontal edge blue intensity:',round(b,1))",network,JSON.stringify(samples)],{encoding:'utf8'});assert.equal(pixels.status,0,pixels.stderr);console.log(pixels.stdout.trim());
   }
   await eeg.locator('#pauseBtn').click();await eeg.locator('#resetBtn').click();await page.waitForTimeout(300);assert.equal(await eeg.locator('#pulses circle').count(),0);
   await page.close();

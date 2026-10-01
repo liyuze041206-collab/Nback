@@ -145,3 +145,118 @@ def test_weightless_api_cannot_classify(tmp_path):
         body=dict(recording_id='x',calibration_id='y',subject='A',session='S')
         assert c.post('/api/analyses',json=body).status_code==409
         assert c.post('/api/calibrations',json=dict(record_0='x',record_2='y',subject='A',session='S')).status_code==409
+
+
+def prepared_bytes(role='query',subject='sub-01',session='ses-S1',source='source0',onsets=None,seed=1):
+    onsets=onsets if onsets is not None else ([20.,22.,24.] if role=='query' else [0.,2.,4.])
+    manifest=dict(subject=subject,session=session,role=role,source_id=source,onsets=onsets,feature_config=FEATURE_CONFIG)
+    return npz_bytes(seed,seconds=2*len(onsets),processing_stage='gspm_preprocessed_epochs_v1',
+                     prepared_manifest=json.dumps(manifest))
+
+
+@pytest.fixture
+def auto_environment(tmp_path,model_dir):
+    import shutil
+    models=tmp_path/'catalog';fold=models/'folds/sub-01';fold.mkdir(parents=True)
+    config=json.loads((model_dir/'manifest.json').read_text())
+    config.update(target_subject='sub-01',validation_subject='sub-02')
+    (fold/'manifest.json').write_text(json.dumps(config))
+    state=torch.load(model_dir/'encoder.pt',weights_only=True)
+    torch.save(dict(model_state=state,test_subject='sub-01',validation_subject='sub-02',ssl_source='matb',
+                    nback_used_in_ssl=False,target_matb_used=False,independent_validation_matb_used=False),fold/'encoder.pt')
+    support=tmp_path/'support';folder=support/'sub-01/ses-S1';folder.mkdir(parents=True)
+    (folder/'support0.npz').write_bytes(prepared_bytes('support0',seed=2))
+    (folder/'support2.npz').write_bytes(prepared_bytes('support2',source='source2',seed=3))
+    data=tmp_path/'data'
+    return data,models,support
+
+
+def upload_prepared(client,content=None,name='sub-01_ses-S1_查询_2-back.npz'):
+    r=client.post('/api/recordings',files=[('files',(name,content or prepared_bytes()))])
+    assert r.status_code==201,r.text
+    return r.json()['id']
+
+
+def test_auto_prepare_reuses_and_matches_manual_results(auto_environment):
+    data,models,support=auto_environment
+    with TestClient(create_app(data,models,support)) as c:
+        query=upload_prepared(c)
+        endpoint=f'/api/recordings/{query}/prepare-analysis'
+        r=c.post(endpoint);assert r.status_code==200,r.text
+        ready=r.json();assert ready['model_id']=='sub-01' and ready['validation_subject']=='sub-02'
+        profile=c.get('/api/calibrations').json()[0];assert profile['shots']==3
+        assert c.post(endpoint).json()==ready
+        assert len(c.get('/api/recordings').json())==3 and len(c.get('/api/calibrations').json())==1
+        # An unrelated filename class label must never change inference inputs.
+        renamed=upload_prepared(c,name='sub-01_ses-S1_查询_0-back.npz')
+        assert c.post(f'/api/recordings/{renamed}/prepare-analysis').json()==ready
+        def run(calibration_id):
+            payload={k:ready[k] for k in ['subject','session','window_mode','event_types']}
+            job=c.post('/api/analyses',json={**payload,'recording_id':query,'calibration_id':calibration_id})
+            assert job.status_code==202,job.text
+            deadline=time.monotonic()+30
+            while time.monotonic()<deadline:
+                result=c.get('/api/analyses/'+job.json()['id']).json()
+                if result['status'] in ['complete','failed']:break
+                time.sleep(.02)
+            assert result['status']=='complete',result
+            return result['rows']
+        rows=run(ready['calibration_id'])
+        manual=c.post('/api/calibrations',json=dict(record_0=profile['recording_ids'][0],record_2=profile['recording_ids'][1],
+            subject='sub-01',session='ses-S1',model_id='sub-01',shots=3)).json()
+        assert rows==run(manual['id'])
+        assert c.post(endpoint).json()['calibration_id']==manual['id']
+        # Existing valid profiles work even if the local support directory is gone.
+        import shutil
+        shutil.rmtree(support)
+        assert c.post(endpoint).json()['calibration_id']==manual['id']
+
+
+@pytest.mark.parametrize('change,message',[
+    ('missing_support','缺失'),('duplicate','重复'),('source','来源'),('overlap','重叠'),
+    ('counts','数量'),('identity','不一致')])
+def test_auto_prepare_rejects_invalid_local_support(auto_environment,change,message):
+    data,models,support=auto_environment;folder=support/'sub-01/ses-S1'
+    if change=='missing_support':(folder/'support2.npz').unlink()
+    elif change=='duplicate':(folder/'copy.npz').write_bytes((folder/'support0.npz').read_bytes())
+    elif change=='source':(folder/'support0.npz').write_bytes(prepared_bytes('support0',source='other',seed=2))
+    elif change=='overlap':(folder/'support0.npz').write_bytes(prepared_bytes('support0',onsets=[20.,22.,24.],seed=2))
+    elif change=='counts':(folder/'support2.npz').write_bytes(prepared_bytes('support2',source='source2',onsets=[0.,2.],seed=3))
+    elif change=='identity':(folder/'support0.npz').write_bytes(prepared_bytes('support0',session='ses-S2',seed=2))
+    with TestClient(create_app(data,models,support)) as c:
+        query=upload_prepared(c);r=c.post(f'/api/recordings/{query}/prepare-analysis')
+        assert r.status_code==409,r.text;assert message in r.json()['detail']
+        assert not c.get('/api/calibrations').json()
+        assert len(c.get('/api/recordings').json())==1
+
+
+@pytest.mark.parametrize('content,name,code,message',[
+    (npz_bytes(),'plain.npz',422,'专用'),
+    (prepared_bytes('support0'),'support.npz',422,'查询'),
+    (prepared_bytes(),'sub-05_ses-S1_query.npz',422,'不一致'),
+    (prepared_bytes(),'sub-01_ses-S2_query.npz',422,'不一致'),
+    (prepared_bytes(subject='sub-99'),'query.npz',409,'模型折'),
+    (prepared_bytes(session='../../outside'),'query.npz',422,'标识')],
+    ids=['plain-npz','support-as-query','wrong-subject-name','wrong-session-name','missing-fold','unsafe-session'])
+def test_auto_prepare_rejects_query_identity(auto_environment,content,name,code,message):
+    with TestClient(create_app(*auto_environment)) as c:
+        query=upload_prepared(c,content,name);r=c.post(f'/api/recordings/{query}/prepare-analysis')
+        assert r.status_code==code,r.text;assert message in r.json()['detail']
+
+
+@pytest.mark.parametrize('damage',['version','preprocessing','baseline','record','overlap'])
+def test_auto_prepare_ignores_invalid_existing_profiles(auto_environment,damage):
+    data,models,support=auto_environment
+    with TestClient(create_app(data,models,support)) as c:
+        query=upload_prepared(c);endpoint=f'/api/recordings/{query}/prepare-analysis'
+        first=c.post(endpoint).json();key=first['calibration_id'];file=data/'calibrations'/f'{key}.json'
+        profile=json.loads(file.read_text())
+        if damage=='version':profile['model_version']='obsolete'
+        elif damage=='preprocessing':profile['preprocessing']={}
+        elif damage=='baseline':(data/'calibrations'/f'{key}.npz').write_bytes(b'invalid')
+        elif damage=='record':(data/'recordings'/f"{profile['recording_ids'][0]}.npy").unlink()
+        elif damage=='overlap':profile['prepared_support'][0]['onsets']=[20.,22.,24.]
+        file.write_text(json.dumps(profile))
+        replacement=c.post(endpoint);assert replacement.status_code==200,replacement.text
+        assert replacement.json()['calibration_id']!=key
+        assert c.post(endpoint).json()==replacement.json()

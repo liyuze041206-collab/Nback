@@ -2,13 +2,17 @@ param([string]$Message = '', [switch]$CheckOnly, [switch]$NoBuild)
 
 # ASCII keeps Windows PowerShell 5.1 compatible with Chinese Windows locales.
 $ErrorActionPreference = 'Stop'
+# Git emits UTF-8 paths. Windows PowerShell otherwise decodes them with the
+# inherited console code page (often CP936), corrupting Chinese folder names.
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $OutputEncoding
 $ProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $ExpectedRemote = 'https://github.com/liyuze041206-collab/Nback.git'
 $Branch = 'main'
 
 function Invoke-ProjectGit {
     param([string[]]$GitArgs)
-    & git -C $ProjectRoot @GitArgs
+    & git -c core.quotepath=false -C $ProjectRoot @GitArgs
     if ($LASTEXITCODE -ne 0) { throw ('Git failed: ' + ($GitArgs -join ' ')) }
 }
 

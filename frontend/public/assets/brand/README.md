@@ -8,10 +8,12 @@ GSPM-Net 深浅版和 A/B/C/D 使用内置 image_gen 工具生成，透明 PNG�
 | --- | --- |
 | gspm-dark.png | 深色主题产品标志 |
 | gspm-light.png | 浅色主题产品标志，与深色版保持同一构图 |
-| letter-A.png | 完整推理流程 |
-| letter-B.png | 频谱–通道门控编码器 |
-| letter-C.png | 少样本原型适配 |
-| letter-D.png | 因果 Markov 滤波 |
+| letter-A-{dark,light}-v2.png | 完整推理流程，深浅主题各一张 |
+| letter-B-{dark,light}-v2.png | 频谱–通道门控编码器，深浅主题各一张 |
+| letter-C-{dark,light}-v2.png | 少样本原型适配，深浅主题各一张 |
+| letter-D-{dark,light}-v2.png | 因果 Markov 滤波，深浅主题各一张 |
+
+当前页面使用第二版字母素材，设计与生成提示词见 `LETTERS-V2.md`。下方保留第一版的生成记录；未使用的第一版图片已清理。
 
 全部生成资源 alpha 范围为 0–255，背景透明。GSPM-Net 拼写及 A/B/C/D 均逐张目视核对，已检查网页中的缩小显示。
 

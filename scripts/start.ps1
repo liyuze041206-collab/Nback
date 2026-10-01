@@ -4,8 +4,20 @@ param([switch]$NoBrowser, [ValidateSet('/demo','/architecture.html','/portal.htm
 $ErrorActionPreference = 'Stop'
 $CodeRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $Backend = Join-Path $CodeRoot 'backend'
+$Frontend = Join-Path $CodeRoot 'frontend'
 $Python = Join-Path $CodeRoot '.venv\Scripts\python.exe'
-$DemoUrl = 'http://127.0.0.1:8000' + $Page
+$PageParts = $Page -split '#', 2
+$DemoUrl = 'http://127.0.0.1:8000' + $PageParts[0] + '?v=20261001-centered'
+if ($PageParts.Count -gt 1) { $DemoUrl += '#' + $PageParts[1] }
+$BrowserPath = $null
+foreach ($BrowserRoot in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA)) {
+    if (-not $BrowserRoot) { continue }
+    foreach ($BrowserRelativePath in @('Google\Chrome\Application\chrome.exe', 'Microsoft\Edge\Application\msedge.exe')) {
+        $BrowserCandidate = Join-Path $BrowserRoot $BrowserRelativePath
+        if (Test-Path -LiteralPath $BrowserCandidate) { $BrowserPath = $BrowserCandidate; break }
+    }
+    if ($BrowserPath) { break }
+}
 $browserJob = $null
 
 try {
@@ -16,6 +28,21 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw 'Dependencies are incomplete. Run install.bat first.'
     }
+
+    if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
+        throw 'Node.js and npm are required. Install Node.js and run install.bat first.'
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $Frontend 'node_modules'))) {
+        throw 'Frontend dependencies are missing. Run install.bat first.'
+    }
+    Write-Host 'Building the latest GSPM-Net pages...' -ForegroundColor Cyan
+    Push-Location -LiteralPath $Frontend
+    try {
+        & npm.cmd run build
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Frontend build failed. The outdated page was not opened. See the error above.'
+        }
+    } finally { Pop-Location }
 
     $probe = [System.Net.Sockets.TcpClient]::new()
     $occupied = $false
@@ -38,7 +65,10 @@ try {
             throw 'Port 8000 is in use by another or unresponsive service. No process was stopped.'
         }
         Write-Host "GSPM-Net platform is ready: $DemoUrl" -ForegroundColor Cyan
-        if (-not $NoBrowser) { Start-Process $DemoUrl }
+        if (-not $NoBrowser) {
+            if ($BrowserPath) { Start-Process -FilePath $BrowserPath -ArgumentList $DemoUrl }
+            else { Start-Process $DemoUrl }
+        }
         exit 0
     }
 
@@ -47,14 +77,15 @@ try {
     Write-Host "Starting GSPM-Net platform: $DemoUrl" -ForegroundColor Cyan
     Write-Host 'Keep this window open. Press Ctrl+C here to stop the service.'
     if (-not $NoBrowser) {
-        $browserJob = Start-Job -ArgumentList $DemoUrl -ScriptBlock {
-            param($url)
+        $browserJob = Start-Job -ArgumentList $DemoUrl, $BrowserPath -ScriptBlock {
+            param($url, $browserPath)
             for ($i=0; $i -lt 60; $i++) {
                 try {
                     $status = Invoke-RestMethod 'http://127.0.0.1:8000/api/status' -TimeoutSec 2
                     if ($status.service -eq 'GSPM-Net') {
                         $null = Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 2
-                        Start-Process $url
+                        if ($browserPath) { Start-Process -FilePath $browserPath -ArgumentList $url }
+                        else { Start-Process $url }
                         return
                     }
                 } catch { }

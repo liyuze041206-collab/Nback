@@ -1,0 +1,38 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "subject": "sub-01",
+      "session": "ses-S1",
+      "shots": 7,
+      "windows": 137,
+      "model_id": "sub-01",
+      "validation_subject": "sub-02",
+      "final_class_label": 2,
+      "auto_manual_identical": true,
+      "idempotent": true
+    },
+    {
+      "subject": "sub-05",
+      "session": "ses-S2",
+      "shots": 7,
+      "windows": 137,
+      "model_id": "sub-05",
+      "validation_subject": "sub-06",
+      "final_class_label": 2,
+      "auto_manual_identical": true,
+      "idempotent": true
+    },
+    {
+      "subject": "sub-18",
+      "session": "ses-S3",
+      "shots": 6,
+      "windows": 138,
+      "model_id": "sub-18",
+      "validation_subject": "sub-19",
+      "final_class_label": 2,
+      "auto_manual_identical": true,
+      "idempotent": true
+    }
+  ]
+}
